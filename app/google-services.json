@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "93155163317",
+    "firebase_url": "https://exchainger-ba4b6.firebaseio.com",
+    "project_id": "exchainger-ba4b6",
+    "storage_bucket": "exchainger-ba4b6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:93155163317:android:4a37762e5434fcb0",
+        "android_client_info": {
+          "package_name": "com.exchainger.exchainger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "93155163317-edlp6ci636k2p8s5jcn8dcihnq1epcov.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.exchainger.exchainger",
+            "certificate_hash": "0ec0f0cfc9f9f2c17ecf10cee378c4c41483e5c8"
+          }
+        },
+        {
+          "client_id": "93155163317-sm6hqh3soqulkghbjklkv72eou4csqkd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBP6BRrqGFNPT5JmB9p06WspZt3mpUQgKQ"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "93155163317-sm6hqh3soqulkghbjklkv72eou4csqkd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

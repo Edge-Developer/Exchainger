@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">Exchainger</string>
+
+    <string name="gift_card">Gift Card</string>
+    <string name="bitcoin">BitCoin</string>
+    <string name="sell_at_once">All at Once</string>
+    <string name="sell_bits">Sell in Bits</string>
+
+    <string-array name="bitcoin_or_giftcard">
+        <item>@string/bitcoin</item>
+        <item>@string/gift_card</item>
+    </string-array>
+
+    <string name="type_a_message">Type a Message</string>
+    <string name="required">Required</string>
+    <string name="welcome">Welcome</string>
+    <string name="sucess_login">Successful Sign In!</string>
+    <string name="sign_out">Sign Out</string>
+
+    <string name="filter">Filter</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="quantity">Quantity</string>
+    <string name="user_paid_message">
+        I Have Paid %1$s for %2$s
+    </string>
+    <string name="proceed">Proceed</string>
+    <string name="proceed_to_pay">Proceed to Pay %1$s?</string>
+    <string name="proceed_to_receive">Proceed to Receive %1$s?</string>
+    <string name="banner_ad_unit_id" translatable="false">ca-app-pub-9297690518647609/8205283260</string>
+    <string name="admob_app_id" translatable="false">ca-app-pub-9297690518647609~5032325018</string>
+    <string name="rewarded_video_ad_unit_id" translatable="false">ca-app-pub-9297690518647609/5609364924</string>
+    <string name="interstitial_ad_unit_id" translatable="false">ca-app-pub-9297690518647609/1995098132</string>
+
+    <string name="watch_video_button_text">Watch Video for additional coins</string>
+    <string name="error_cant_load_video">Sorry, Video Could not be Loaded, Try Again Later</string>
+    <string name="x_coins">50 Coins</string>
+    <string name="register_or_sign_in">Kindly Register or Sign In</string>
+    <string name="add_request">Add Request</string>
+    <string-array name="input">
+        <item>iTunes</item>
+        <item>Amazon</item>
+        <item>BestBuy</item>
+        <item>Ebay</item>
+        <item>Walmart</item>
+        <item>Kohl</item>
+    </string-array>
+</resources>

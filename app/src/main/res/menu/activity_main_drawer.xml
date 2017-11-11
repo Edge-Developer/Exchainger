@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_sign_in"
+        android:title="Sign In"/>
+    <item
+        android:id="@+id/nav_resend_email"
+        android:icon="@drawable/ic_info_star"
+        android:title="Resend Verification Email"/>
+    <item
+        android:id="@+id/nav_news"
+        android:title="News"/>
+    <item
+        android:id="@+id/nav_tos"
+        android:title="Terms of Service"/>
+    <item
+        android:id="@+id/nav_faq"
+        android:title="Shop"/>
+    <item
+        android:id="@+id/nav_get_free_coins"
+        android:title="Get Free Coins"/>
+</menu>
