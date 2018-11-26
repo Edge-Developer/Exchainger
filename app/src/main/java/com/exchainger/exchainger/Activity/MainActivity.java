@@ -19,6 +19,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -52,8 +53,11 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -68,6 +72,7 @@ import static com.exchainger.exchainger.Model.Constants.FIREBASE_CHILD_TRANSACTI
 import static com.exchainger.exchainger.Model.Constants.FIREBASE_CHILD_TRANSACTION_INFO;
 import static com.exchainger.exchainger.Model.Constants.FIREBASE_CHILD_USERS;
 import static com.exchainger.exchainger.Model.Constants.SELLER_ID;
+import static com.exchainger.exchainger.R.id.coins;
 
 public class MainActivity extends AppCompatActivity implements SellFragment.SellItemListener
         , BuyFragment.BuyItemListener
@@ -107,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
     private InterstitialAd mInterstitialAd;
     private FirebaseUser temporaryUser;
+    private boolean isAccountActive = true;
 
     private TextView navHeaderEmailTxtView;
     private TextView navHeaderDisplayNameTxtView;
@@ -114,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
     private FirebaseAnalytics mFirebaseAnalytics;
     private AdView mAdView;
     private TabLayout.OnTabSelectedListener mTabSelectListener = new TabLayout.OnTabSelectedListener() {
+
         @Override
         public void onTabSelected(TabLayout.Tab LayoutTab) {
             currentTabPosition = LayoutTab.getPosition();
@@ -131,11 +138,44 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
         }
     };
+    private DrawerLayout drawer;
+    private ValueEventListener profileListener = new ValueEventListener() {
+        @Override
+        public void onDataChange(DataSnapshot snapshot) {
+            Profile profile = null;
+            String string;
+
+            try {
+                profile = snapshot.getValue(Profile.class);
+            } catch (Exception e) {
+                Log.d(TAG, "onDataChange: ", e);
+            }
+
+            if (profile == null) {
+                mUserDatabaseRef.child(mCurrentUser.getUid()).setValue(new Profile());
+                Log.d(TAG, "onDataChange: Profile Was Null");
+                string = "Loading...";
+            } else {
+                int coins = profile.getCoins();
+                string = coins + " Coins";
+                Log.d(TAG, "onDataChange: " + profile.toString());
+            }
+            setUserDetails(mCurrentUser.getEmail(), mCurrentUser.getDisplayName(), string);
+
+        }
+
+        @Override
+        public void onCancelled(DatabaseError error) {
+            Log.d(TAG, "onCancelled: "+error.getMessage());
+        }
+    };
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mMainBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        MobileAds.initialize(this, "ca-app-pub-9297690518647609~5032325018");
         Toolbar toolbar = mMainBinding.toolbar;
         setSupportActionBar(toolbar);
 
@@ -172,27 +212,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
         mUserDatabaseRef = firebaseDatabase.getReference().child(FIREBASE_CHILD_USERS);
 
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        viewPager.setAdapter(new FragmentStatePagerAdapter(fragmentManager) {
-            @Override
-            public Fragment getItem(int position) {
-                switch (position) {
-                    case 0:
-                        return new SellFragment();
-                    case 1:
-                        return new BuyFragment();
-                    case 2:
-                        return new TransactionFragment();
-                    default:
-                        return null;
-                }
-            }
-
-            @Override
-            public int getCount() {
-                return tabLayout.getTabCount();
-            }
-        });
+        viewPager.setAdapter(new ViewPagerAdapter(getSupportFragmentManager()));
 
         tabLayout.addOnTabSelectedListener(mTabSelectListener);
         viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
@@ -204,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
         viewPager.setCurrentItem(currentTabPosition);
 
-        DrawerLayout drawer = mMainBinding.drawerLayout;
+        drawer = mMainBinding.drawerLayout;
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
@@ -213,12 +233,15 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         View navHeader = LayoutInflater.from(this).inflate(R.layout.nav_header_main, null);
         navHeaderEmailTxtView = navHeader.findViewById(R.id.email_address);
         navHeaderDisplayNameTxtView = navHeader.findViewById(R.id.display_name);
-        navHeaderCoinsTxtView = navHeader.findViewById(R.id.coins);
+        navHeaderCoinsTxtView = navHeader.findViewById(coins);
 
-        if (mCurrentUser != null)
-            setUserDetails(mCurrentUser.getEmail(), mCurrentUser.getDisplayName(), getString(R.string.x_coins));
-        else
+        if (mCurrentUser != null) {
+            setUserDetails(mCurrentUser.getEmail(), mCurrentUser.getDisplayName(), "Loading...");
+            mUserDatabaseRef.child(mCurrentUser.getUid()).addValueEventListener(profileListener);
+        } else {
             setUserDetails("annonymous", "Welcome", "Kindly Register or Sign In");
+            showSnackBar("Welcome! Kindly Register or Sign In");
+        }
 
         navView.addHeaderView(navHeader);
         navView.setNavigationItemSelectedListener(this);
@@ -235,10 +258,12 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
                     navView.getMenu().findItem(R.id.nav_sign_in).setTitle("Register/Sign In");
                 } else {
                     if (user.isEmailVerified()) {
+                        // TODO: 11/12/2017  sign in up with another Provider such as Gooogle does not set profile points
                         mCurrentUser = user;
-                        //FirebaseAuth.getInstance().getCurrentUser().reload();
                         navView.getMenu().findItem(R.id.nav_sign_in).setTitle("Sign Out");
-                        setUserDetails(mCurrentUser.getEmail(), mCurrentUser.getDisplayName(), getString(R.string.x_coins));
+                        setUserDetails(mCurrentUser.getEmail(), mCurrentUser.getDisplayName(), "Loading...");
+                        mUserDatabaseRef.child(mCurrentUser.getUid()).addValueEventListener(profileListener);
+
                     } else {
                         temporaryUser = user;
                         mDatabase.getReference(FIREBASE_CHILD_USERS).child(user.getUid()).setValue(new Profile());
@@ -267,6 +292,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         //mAdView.loadAd(new AdRequest.Builder().build());  //don't load the Ad just yet
     }
 
+
     private void setUserDetails(String email, String name, String string) {
         navHeaderEmailTxtView.setText(email);
         navHeaderDisplayNameTxtView.setText(name);
@@ -275,10 +301,16 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
     private void lauchSignInScreen() {
         List<AuthUI.IdpConfig> providers = new ArrayList<>();
-        providers.add(new AuthUI.IdpConfig.Builder(AuthUI.EMAIL_PROVIDER).build());
+        /*providers.add(new AuthUI.IdpConfig.Builder(AuthUI.EMAIL_PROVIDER).build());
         providers.add(new AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER).build());
+        providers.add(new AuthUI.IdpConfig.Builder(AuthUI.FACEBOOK_PROVIDER).build());*/
         startActivityForResult(
-                AuthUI.getInstance().createSignInIntentBuilder().setAvailableProviders(providers).build(),
+                AuthUI.getInstance()
+                        .createSignInIntentBuilder()
+                        .setLogo(R.mipmap.ic_launcher)
+                        .setAvailableProviders(providers)
+                        .setIsSmartLockEnabled(true)
+                        .build(),
                 SIGN_IN_REQUEST_CODE);
     }
 
@@ -320,9 +352,12 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == SIGN_IN_REQUEST_CODE) {
             if (resultCode == RESULT_OK) {
-                if (mCurrentUser != null)
+                final FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                mUserDatabaseRef.child(user.getUid()).addListenerForSingleValueEvent(profileListener);
+                FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+                if (firebaseUser.isEmailVerified()) {
                     showSnackBar(getString(R.string.sucess_login));
-                else if (temporaryUser != null)
+                } else
                     showIndefiniteSnackBar("Kindly Verify Your Email Address, Then Sign In Again!");
             } else
                 Toast.makeText(MainActivity.this, "We couldn't sign you in. Please try again later.", Toast.LENGTH_LONG).show();
@@ -386,8 +421,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
     @Override
     public void onSellItemClicked(TransactionRequest request, String transactionKey) {
         displayAd();
-        if (isUserNull())
-            return;
+        if (isUserNull()) return;
 
         this.transRequest = request;
         this.nodeKey = transactionKey;
@@ -398,15 +432,21 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         int dollarPrice = request.getDollarPrice();
         int price = eRate * dollarPrice;
 
-        launchDialog("Buy " + itemNameNvalue, isInParts, eRate, dollarPrice, price, false);
+        launchDialog(
+                "Buy " + itemNameNvalue,
+                isInParts,
+                eRate,
+                dollarPrice,
+                price,
+                false
+        );
     }
 
     @Override
     public void onBuyItemClicked(TransactionRequest request, String transactionKey) {
         displayAd();
-        if (isUserNull()) {
-            return;
-        }
+        if (isUserNull()) return;
+
         this.transRequest = request;
         this.nodeKey = transactionKey;
         TRANSACTION_USER_ID = SELLER_ID;
@@ -414,19 +454,25 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         int eRate = request.getExchangePrice();
         int dollarPrice = request.getDollarPrice();
         int price = eRate * dollarPrice;
-        launchDialog("Sell " + itemNameNvalue, false, eRate, dollarPrice, price, true);
+        launchDialog(
+                "Sell " + itemNameNvalue,
+                false,
+                eRate,
+                dollarPrice,
+                price,
+                true);
     }
 
     @Override
     public void clickedOkDialog(String message) {
         displayAd();
         Transaction transaction = new Transaction(
-                true
-                , transRequest.getTranactionType()
-                , new Date().getTime()
-                , transRequest.getDollarPrice()
-                , transRequest.getExchangePrice()
-                , nodeKey
+                true,
+                transRequest.getTranactionType(),
+                new Date().getTime(),
+                transRequest.getDollarPrice(),
+                transRequest.getExchangePrice(),
+                nodeKey
         );
 
         mDatabase.getReference(FIREBASE_CHILD_USERS)
@@ -443,7 +489,7 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
     }
 
     @Override
-    public void onTransItemClick(String key, String transactionUserId) {
+    public void onTransactionItemClick(String key, String transactionUserId) {
         displayAd();
         openChatActivity(key, transactionUserId);
     }
@@ -470,7 +516,6 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
 
     @Override
     public void onBackPressed() {
-        DrawerLayout drawer = mMainBinding.drawerLayout;
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
         } else {
@@ -518,9 +563,38 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
                     }
                 });
         }
+
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        switch (id) {
+            case R.id.filter_request:
+                return true;
+            case R.id.add_request:
+                if (mCurrentUser == null)
+                    showSnackBar(getString(R.string.register_or_sign_in));
+                else {
+                    boolean isSell;
+                    switch (currentTabPosition) {
+                        case 0:
+                        case 1:
+                            isSell = (currentTabPosition == 0);
+                            Intent intent = AddRequestActivity.getIntent(MainActivity.this, isSell);
+                            startActivityForResult(intent, ADD_TRANS_REQUEST_CODE);
+                            break;
+                        case 2:
+                            break;
+                    }
+                }
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void displayAd() {
@@ -533,6 +607,36 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
         }
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    private class ViewPagerAdapter extends FragmentStatePagerAdapter{
+
+        public ViewPagerAdapter(FragmentManager fm) {
+            super(fm);
+        }
+        @Override
+        public Fragment getItem(int position) {
+            switch (position) {
+                case 0:
+                    return new SellFragment();
+                case 1:
+                    return new BuyFragment();
+                case 2:
+                    return new TransactionFragment();
+                default:
+                    return null;
+            }
+        }
+
+        @Override
+        public int getCount() {
+            return tabLayout.getTabCount();
+        }
+    }
     @Override
     public void onRewardedVideoAdLoaded() {
 
@@ -567,36 +671,9 @@ public class MainActivity extends AppCompatActivity implements SellFragment.Sell
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
-        return super.onCreateOptionsMenu(menu);
+    public void onRewardedVideoCompleted() {
+
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        switch (id) {
-            case R.id.filter_request:
-                return true;
-            case R.id.add_request:
-                if (mCurrentUser == null)
-                    showSnackBar(getString(R.string.register_or_sign_in));
-                else {
-                    boolean isSell;
-                    switch (currentTabPosition) {
-                        case 0:
-                        case 1:
-                            isSell = (currentTabPosition == 0);
-                            Intent intent = AddRequestActivity.getIntent(MainActivity.this, isSell);
-                            startActivityForResult(intent, ADD_TRANS_REQUEST_CODE);
-                            break;
-                        case 2:
-                            break;
-                    }
-                }
-                return true;
-            default:
-                return false;
-        }
-    }
+
 }

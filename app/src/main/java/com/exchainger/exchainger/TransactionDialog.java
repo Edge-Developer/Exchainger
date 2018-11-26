@@ -20,7 +20,7 @@ import com.exchainger.exchainger.Model.Constants;
 import static com.exchainger.exchainger.Model.Constants.FORMATTER;
 
 /**
- * Created by OPEYEMI OLORUNLEKE on 9/14/2017.
+ * Created by OPEYEMI OLORUNLEKE on 9\/14/2017.
  */
 
 public class TransactionDialog extends DialogFragment {
@@ -131,13 +131,13 @@ public class TransactionDialog extends DialogFragment {
         final LayoutInflater inflater = LayoutInflater.from(getActivity());
         View view = inflater.inflate(R.layout.transaction_dailog, null);
 
-        finalMsgTxtView = (TextView) view.findViewById(R.id.final_msg_txt);
-        serviceChargeTxtView = (TextView) view.findViewById(R.id.service_charge);
-        quantityEdtTxt = (TextInputEditText) view.findViewById(R.id.quantity_edit_txt);
-        eRateTxtView = (TextView) view.findViewById(R.id.eRate);
-        quantityTxtView = (TextView) view.findViewById(R.id.quantity_txt_view);
-        priceTxtView = (TextView) view.findViewById(R.id.price);
-        totalPriceTxtView = (TextView) view.findViewById(R.id.total_price);
+        finalMsgTxtView = view.findViewById(R.id.final_msg_txt);
+        serviceChargeTxtView = view.findViewById(R.id.service_charge);
+        quantityEdtTxt = view.findViewById(R.id.quantity_edit_txt);
+        eRateTxtView = view.findViewById(R.id.eRate);
+        quantityTxtView = view.findViewById(R.id.quantity_txt_view);
+        priceTxtView = view.findViewById(R.id.price);
+        totalPriceTxtView = view.findViewById(R.id.total_price);
 
         serviceCharge = (int) (0.0119 * price);
 
@@ -168,7 +168,7 @@ public class TransactionDialog extends DialogFragment {
                 .setPositiveButton(getContext().getString(R.string.proceed), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        //mListener.clickedOkDialog(message);
+                        mListener.clickedOkDialog("");
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {

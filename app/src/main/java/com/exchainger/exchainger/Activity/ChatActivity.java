@@ -7,10 +7,10 @@ import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.InputFilter;
@@ -18,10 +18,12 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.format.DateFormat;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -36,6 +38,7 @@ import com.exchainger.exchainger.R;
 import com.exchainger.exchainger.databinding.ActivityChatBinding;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.firebase.ui.database.FirebaseRecyclerOptions;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -44,12 +47,11 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ChatActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -59,10 +61,9 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     private static final String TRANSACTION_USER_ID_KEY = "transaction.user.id.key";
 
     private static final String TAG = "ChatActivity";
-    private static final int DEFAULT_MSG_LENGTH_LIMIT = 250;
+    private static final int DEFAULT_MSG_LENGTH_LIMIT = 140;
 
     private EditText input;
-    private FirebaseRecyclerAdapter<ChatMessage, ChatHolder> mRecyclerAdapter;
     private DatabaseReference mMessageDatabaseReference;
     private FirebaseUser mFirebaseUser;
     private FirebaseAnalytics mFirebaseAnalytics;
@@ -71,14 +72,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     private ImageButton photoPicker;
     private ProgressBar mProgressBar;
     private FirebaseAuth mFirebaseAuth;
-    private FirebaseAuth.AuthStateListener mAuthStateListener;
     private ActivityChatBinding mChatBinding;
     private FirebaseStorage mFirebaseStorage;
     private StorageReference mChatPhotosStorageReference;
     private ChildEventListener mChildEventListener;
     private FirebaseDatabase mFirebaseDatabase;
     private DatabaseReference referenceToTransChat;
-
+    private RecyclerAdapter mRecyclerAdapter;
+    private LinearLayoutManager mLinearLayoutManager;
 
 
     public static Intent newIntent(Context context, String transactionId, String transactionUserID) {
@@ -88,75 +89,18 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         return intent;
     }
 
-    private static CharSequence formatDate(long date) {
-        return DateFormat.format("h:mm a d/MMM/yy", date);
-    }
-
-    private void detachChildListener(){
-        if (mChildEventListener != null){
-            referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTIONS).removeEventListener(mChildEventListener);
-            mChildEventListener = null;
-        }
-    }
-
-    private void attachChildListener(){
-        if (mChildEventListener == null){
-            mChildEventListener = new ChildEventListener() {
-                @Override
-                public void onChildAdded(DataSnapshot snapshot, String s) {
-                }
-
-                @Override
-                public void onChildChanged(DataSnapshot snapshot, String s) {
-                    Boolean bool = true;
-
-                    try {
-                        bool = snapshot.getValue(Boolean.class);
-                    } catch (Exception e) {
-                        Log.e(TAG, "onChildChanged: " + e.getMessage());
-                    }
-                    if (bool) {
-                        input.setVisibility(View.VISIBLE);
-                        mFab.setVisibility(View.VISIBLE);
-                        photoPicker.setVisibility(View.VISIBLE);
-                    } else {
-                        input.setVisibility(View.GONE);
-                        mFab.setVisibility(View.GONE);
-                        photoPicker.setVisibility(View.GONE);
-                    }
-                }
-
-                @Override
-                public void onChildRemoved(DataSnapshot snapshot) {
-
-                }
-
-                @Override
-                public void onChildMoved(DataSnapshot snapshot, String s) {
-
-                }
-
-                @Override
-                public void onCancelled(DatabaseError error) {
-
-                }
-            };
-            referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTIONS).addChildEventListener(mChildEventListener);
-            referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTIONS).addChildEventListener(mChildEventListener);
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mChatBinding = DataBindingUtil.setContentView(this, R.layout.activity_chat);
 
+
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
         mFirebaseAuth = FirebaseAuth.getInstance();
         mFirebaseStorage = FirebaseStorage.getInstance();
         mFirebaseDatabase = FirebaseDatabase.getInstance();
-
         mFirebaseUser = mFirebaseAuth.getCurrentUser();
+
         final Intent intent = getIntent();
         final String transactionKey = intent.getStringExtra(TRANSACTION_KEY_KEY);
         String buyer_or_seller = intent.getStringExtra(TRANSACTION_USER_ID_KEY);
@@ -172,30 +116,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         mProgressBar = mChatBinding.progressBar;
 
         mProgressBar.setVisibility(View.INVISIBLE);
+        mLinearLayoutManager = new LinearLayoutManager(this);
+        mListOfMessages.setLayoutManager(mLinearLayoutManager);
+        mListOfMessages.setHasFixedSize(true);
 
         mFirebaseUser = mFirebaseAuth.getCurrentUser();
         referenceToTransChat = mFirebaseDatabase.getReference(Constants.FIREBASE_CHILD_TRANSACTION_CHATS).child(transactionKey);
         mMessageDatabaseReference = referenceToTransChat.child(Constants.FIREBASE_CHILD_CHATS);
         referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTION_INFO).child(buyer_or_seller).setValue(mFirebaseUser.getUid());
-        mAuthStateListener = new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth auth) {
-                FirebaseUser user = auth.getCurrentUser();
-                if (user != null) {
-                    //displayChatMessages();
-                } else {
-                    List<AuthUI.IdpConfig> providers = new ArrayList<>();
-                    providers.add(new AuthUI.IdpConfig.Builder(AuthUI.EMAIL_PROVIDER).build());
-                    providers.add(new AuthUI.IdpConfig.Builder(AuthUI.GOOGLE_PROVIDER).build());
-                    startActivityForResult(
-                            AuthUI.getInstance()
-                                    .createSignInIntentBuilder()
-                                    .setAvailableProviders(providers)
-                                    .build()
-                            , SIGN_IN_REQUEST_CODE);
-                }
-            }
-        };
         input.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -217,17 +145,29 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(DEFAULT_MSG_LENGTH_LIMIT)});
+        displayChatMessages();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mRecyclerAdapter.startListening();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mRecyclerAdapter.stopListening();
     }
 
     private void displayChatMessages() {
-        /*final LinearLayoutManager mLinearLayoutManager = new LinearLayoutManager(this);
-        mListOfMessages.setLayoutManager(mLinearLayoutManager);
-        mRecyclerAdapter = new FirebaseRecyclerAdapter<ChatMessage, ChatHolder>(ChatMessage.class, R.layout.chat_message, ChatHolder.class, mMessageDatabaseReference) {
-            @Override
-            protected void populateViewHolder(ChatHolder viewHolder, ChatMessage model, int position) {
-                viewHolder.bind(model);
-            }
-        };
+
+        Query chatQuery = mMessageDatabaseReference.orderByKey();
+        FirebaseRecyclerOptions<ChatMessage> chatOptions = new FirebaseRecyclerOptions
+                .Builder<ChatMessage>()
+                .setQuery(chatQuery, ChatMessage.class)
+                .build();
+        mRecyclerAdapter = new RecyclerAdapter(chatOptions);
         mRecyclerAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
             @Override
             public void onItemRangeInserted(int positionStart, int itemCount) {
@@ -241,7 +181,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         mListOfMessages.setAdapter(mRecyclerAdapter);
-*/
+
     }
 
     @Override
@@ -272,7 +212,7 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                         getResources().getString(R.string.sucess_login),
                         Toast.LENGTH_LONG)
                         .show();
-                //displayChatMessages();
+                displayChatMessages();
             } else if (resultCode == RESULT_CANCELED) {
                 Toast.makeText(this,
                         "We couldn't sign you in. Please try again later.",
@@ -320,9 +260,9 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         return result;
     }
 
-    public String getRealPathFromURI_ (Uri contentUri) {
+    public String getRealPathFromURI_(Uri contentUri) {
         String res = null;
-        String[] proj = { MediaStore.Images.Media.DATA};
+        String[] proj = {MediaStore.Images.Media.DATA};
         Cursor cursor = getContentResolver().query(contentUri, proj, "", null, "");
         if (cursor.moveToFirst()) {
             int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
@@ -353,7 +293,6 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onResume() {
         super.onResume();
-        mFirebaseAuth.addAuthStateListener(mAuthStateListener);
         attachChildListener();
 
     }
@@ -361,7 +300,6 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
-        mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
         detachChildListener();
     }
 
@@ -398,6 +336,79 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                 photoImageView.setVisibility(View.GONE);
             }
 
+        }
+    }
+
+    private class RecyclerAdapter extends FirebaseRecyclerAdapter<ChatMessage, ChatHolder> {
+        public RecyclerAdapter(FirebaseRecyclerOptions<ChatMessage> options) {
+            super(options);
+        }
+
+        @Override
+        protected void onBindViewHolder(ChatHolder holder, int position, ChatMessage model) {
+            holder.bind(model);
+        }
+
+        @Override
+        public ChatHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.chat_message, parent, false);
+            return new ChatHolder(view);
+        }
+    }
+    private static CharSequence formatDate(long date) {
+        return DateFormat.format("h:mm a d/MMM/yy", date);
+    }
+
+    private void detachChildListener() {
+        if (mChildEventListener != null) {
+            referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTIONS).removeEventListener(mChildEventListener);
+            mChildEventListener = null;
+        }
+    }
+
+    private void attachChildListener() {
+        if (mChildEventListener == null) {
+            mChildEventListener = new ChildEventListener() {
+                @Override
+                public void onChildAdded(DataSnapshot snapshot, String s) {
+                }
+
+                @Override
+                public void onChildChanged(DataSnapshot snapshot, String s) {
+                    Boolean bool = true;
+
+                    try {
+                        bool = snapshot.getValue(Boolean.class);
+                    } catch (Exception e) {
+                        Log.e(TAG, "onChildChanged: " + e.getMessage());
+                    }
+                    if (bool) {
+                        input.setVisibility(View.VISIBLE);
+                        mFab.setVisibility(View.VISIBLE);
+                        photoPicker.setVisibility(View.VISIBLE);
+                    } else {
+                        input.setVisibility(View.GONE);
+                        mFab.setVisibility(View.GONE);
+                        photoPicker.setVisibility(View.GONE);
+                    }
+                }
+
+                @Override
+                public void onChildRemoved(DataSnapshot snapshot) {
+
+                }
+
+                @Override
+                public void onChildMoved(DataSnapshot snapshot, String s) {
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+
+                }
+            };
+            referenceToTransChat.child(Constants.FIREBASE_CHILD_TRANSACTIONS).addChildEventListener(mChildEventListener);
         }
     }
 }

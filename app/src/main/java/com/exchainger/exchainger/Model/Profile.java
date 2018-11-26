@@ -7,7 +7,7 @@ import com.google.firebase.auth.FirebaseAuth;
  */
 
 public class Profile {
-    private int points = 50;
+    private int coins = 50;
     private String email = FirebaseAuth.getInstance().getCurrentUser().getEmail();
     private boolean isSubscriber = false ;
     private final boolean isActive = true;
@@ -16,13 +16,13 @@ public class Profile {
     }
 
     public Profile(int points, String email, boolean isSubscriber) {
-        this.points = points;
+        this.coins = points;
         this.email = email;
         this.isSubscriber = isSubscriber;
     }
 
-    public int getPoints() {
-        return points;
+    public int getCoins() {
+        return coins;
     }
 
     public String getEmail() {
@@ -35,5 +35,15 @@ public class Profile {
 
     public boolean getIsActive() {
         return isActive;
+    }
+
+    @Override
+    public String toString() {
+        return "Profile{" +
+                "coins=" + coins +
+                ", email='" + email + '\'' +
+                ", isSubscriber=" + isSubscriber +
+                ", isActive=" + isActive +
+                '}';
     }
 }

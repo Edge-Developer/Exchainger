@@ -31,5 +31,8 @@
             android:name=".Activity.AddRequestActivity"
             android:parentActivityName=".Activity.MainActivity">
         </activity>
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-9297690518647609~5032325018" />
     </application>
 </manifest>

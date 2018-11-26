@@ -17,7 +17,6 @@ import android.widget.TextView;
 import com.exchainger.exchainger.Model.Constants;
 import com.exchainger.exchainger.R;
 import com.exchainger.exchainger.Transaction;
-import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
@@ -92,7 +91,7 @@ public class TransactionFragment extends Fragment {
     }
 
     public interface TransactionItem {
-        void onTransItemClick(String key, String transactionId);
+        void onTransactionItemClick(String key, String transactionId);
     }
 
     public static class TransactionHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -137,7 +136,7 @@ public class TransactionFragment extends Fragment {
             if (str.contains("Selling")) T_USER_ID = Constants.BUYER_ID;
             else T_USER_ID = Constants.SELLER_ID;
 
-            mListener.onTransItemClick(transactionKey, T_USER_ID);
+            mListener.onTransactionItemClick(transactionKey, T_USER_ID);
         }
     }
 

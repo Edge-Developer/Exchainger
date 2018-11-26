@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/nav_sign_in"
-        android:title="Sign In"/>
-    <item
-        android:id="@+id/nav_resend_email"
-        android:icon="@drawable/ic_info_star"
-        android:title="Resend Verification Email"/>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item android:title="Account">
+        <menu>
+            <item
+                android:id="@+id/nav_sign_in"
+                android:title="Sign In"/>
+            <item
+                android:id="@+id/nav_change_password"
+                android:title="Change Password"/>
+            <item
+                android:id="@+id/nav_resend_email"
+                android:icon="@drawable/ic_info_star"
+                android:title="Resend Verification Email"/>
+        </menu>
+    </item>
+
     <item
         android:id="@+id/nav_news"
         android:title="News"/>
@@ -19,4 +29,5 @@
     <item
         android:id="@+id/nav_get_free_coins"
         android:title="Get Free Coins"/>
+
 </menu>
